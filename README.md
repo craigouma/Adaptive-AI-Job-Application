@@ -4,38 +4,61 @@ A modern, AI-powered job application system that dynamically generates personali
 
 ## 🚀 Features
 
-- **Adaptive Questioning**: Dynamic question generation based on user responses
-- **Role-Based Personalization**: Different question sets for Frontend Engineers and Product Designers
+- **Adaptive Questioning**: Dynamic question generation based on user responses using Groq AI
+- **Multiple Job Roles**: Support for 10 different roles including Frontend Engineer, Product Designer, Backend Engineer, and more
 - **Real-time Progress Tracking**: Visual progress indicators with smooth animations
 - **AI-Powered Logic**: Uses Groq's LLaMA model for intelligent question sequencing
 - **Database Integration**: Supabase for secure application storage
-- **Modern UI/UX**: Beautiful, responsive design with micro-interactions
+- **Admin Dashboard**: Complete admin interface for managing applications with analytics
+- **Mobile-First Design**: Responsive design optimized for mobile devices
 - **Comprehensive Testing**: Unit tests with Vitest and E2E tests with Playwright
 
 ## 🏗️ Architecture
 
 ### Frontend (React + TypeScript)
+- **ApplicationFlow**: Main application component managing the flow
 - **QuestionCard**: Renders individual questions with various input types
 - **ProgressIndicator**: Shows completion progress with visual feedback
-- **RoleToggle**: Switches between Frontend Engineer and Product Designer
+- **RoleToggle**: Dropdown selector for choosing job roles
 - **CompletionCard**: Displays success message and next steps
+- **AdminDashboard**: Complete admin interface with analytics
 
 ### Backend (Supabase Edge Functions)
-- **next-question**: Determines the next question based on current answers
+- **next-question**: Determines the next question based on current answers using AI
 - **submit-application**: Saves completed applications to the database
+- **admin-applications**: Retrieves applications for admin dashboard
+- **admin-analytics**: Provides application analytics and insights
+- **admin-score-candidate**: AI-powered candidate scoring system
 
 ### Database (PostgreSQL)
-- **applications**: Stores application data with role and answers in JSONB format
+- **applications**: Stores application data with role, answers, status, and scores
+- **admin_users**: Admin authentication system
 
 ## 🛠️ How Adaptive Question Logic Works
 
-The application uses a sophisticated question flow system:
+The application uses a sophisticated question flow system powered by Groq AI:
 
-1. **Role Selection**: User chooses between Frontend Engineer or Product Designer
-2. **Question Sets**: Each role has its own predefined question sequence
-3. **Dynamic Flow**: Questions are served one at a time based on previous answers
-4. **Progress Tracking**: Real-time updates show completion percentage
-5. **Completion Detection**: System automatically detects when all questions are answered
+1. **Role Selection**: User chooses from 10 available job roles
+2. **AI-Generated Questions**: Groq AI generates contextual questions based on:
+   - Selected role and its requirements
+   - Previous answers from the candidate
+   - Current stage in the application process
+3. **Dynamic Flow**: Questions are served one at a time, each building on previous responses
+4. **Fallback System**: Predefined questions ensure the system works even without AI
+5. **Progress Tracking**: Real-time updates show completion percentage
+6. **Completion Detection**: System automatically detects when all questions are answered
+
+### Supported Job Roles:
+- **Frontend Engineer**: React, TypeScript, CSS, JavaScript focus
+- **Product Designer**: UX/UI design, design systems, user research
+- **Backend Engineer**: Server-side development, APIs, databases
+- **Full Stack Engineer**: End-to-end development
+- **Data Scientist**: Machine learning, data analysis, Python/R
+- **DevOps Engineer**: Infrastructure, CI/CD, cloud platforms
+- **Product Manager**: Product strategy, roadmap planning
+- **UI/UX Designer**: Interface design, user experience
+- **Mobile Developer**: iOS, Android, cross-platform development
+- **QA Engineer**: Testing, automation, quality assurance
 
 ### Question Types Supported:
 - **Text Input**: For names, emails, and short answers
@@ -83,8 +106,20 @@ The application automatically creates the required database schema:
 -- Applications table
 CREATE TABLE applications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  role text NOT NULL CHECK (role IN ('frontend-engineer', 'product-designer')),
+  role text NOT NULL CHECK (role IN ('frontend-engineer', 'product-designer', ...)),
   answers jsonb NOT NULL DEFAULT '[]'::jsonb,
+  status text DEFAULT 'pending',
+  score integer,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Admin users table
+CREATE TABLE admin_users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text UNIQUE NOT NULL,
+  password_hash text NOT NULL,
+  role text DEFAULT 'admin',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -144,11 +179,42 @@ npm run test:e2e:ui
 ```
 
 ### Test Scenarios
-- **Complete Application Flow**: Tests full application submission
+- **Complete Application Flow**: Tests full application submission for different roles
 - **Role Switching**: Verifies different question sets for each role
 - **Progress Tracking**: Ensures accurate progress calculation
 - **Form Validation**: Tests required field validation
 - **Error Handling**: Verifies graceful error handling
+- **Admin Dashboard**: Tests admin functionality and analytics
+
+## 🎯 Admin Dashboard Features
+
+### Authentication
+- Secure admin login system
+- Default credentials: `craigcarlos95@gmail.com` / `password123`
+
+### Application Management
+- View all applications with filtering by role and status
+- Update application status (pending, reviewed, shortlisted, rejected)
+- Detailed application view with candidate responses
+- Export applications to CSV or PDF
+
+### Analytics & Insights
+- Total applications and completion rates
+- Applications breakdown by role
+- Drop-off analysis to identify problematic questions
+- Recent applications overview
+- Top candidates identification
+
+### AI-Powered Candidate Scoring
+- Automatic candidate scoring using Groq AI
+- Scores across multiple dimensions:
+  - Overall Score (0-100)
+  - Skills Assessment
+  - Experience Evaluation
+  - Communication Quality
+  - Culture Fit Analysis
+- Detailed reasoning for each score
+- Bulk scoring capabilities
 
 ## 🚀 Deployment
 
@@ -160,7 +226,7 @@ The application can be deployed to any static hosting service:
 npm run build
 ```
 
-2. **Deploy the `dist` folder** to your hosting service
+2. **Deploy the `dist` folder** to your hosting service (Netlify, Vercel, etc.)
 
 ### Supabase Edge Functions
 Edge functions are automatically deployed when you push to your Supabase project.
@@ -168,10 +234,11 @@ Edge functions are automatically deployed when you push to your Supabase project
 ## 🔍 Monitoring & Analytics
 
 ### Application Metrics
-- Response completion rates
+- Response completion rates by role
 - Average time per question
-- Role distribution
-- Drop-off points in the application flow
+- Role distribution analysis
+- Drop-off points identification
+- Candidate scoring distribution
 
 ### Database Queries
 ```sql
@@ -179,13 +246,15 @@ Edge functions are automatically deployed when you push to your Supabase project
 SELECT 
   role,
   COUNT(*) as total_applications,
-  AVG(jsonb_array_length(answers)) as avg_questions_answered
+  AVG(jsonb_array_length(answers)) as avg_questions_answered,
+  AVG(score) as avg_score
 FROM applications 
 GROUP BY role;
 
--- Recent applications
-SELECT role, answers, created_at 
+-- Recent high-scoring applications
+SELECT role, answers, score, created_at 
 FROM applications 
+WHERE score >= 80
 ORDER BY created_at DESC 
 LIMIT 10;
 ```
@@ -222,6 +291,11 @@ This project is licensed under the MIT License.
 - Check TypeScript configuration
 - Verify all environment variables are set
 
+**AI Question Generation Issues**
+- Check Groq API key is valid and has credits
+- Verify network connectivity
+- The system will fall back to predefined questions if AI fails
+
 ## 📚 Technology Stack
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS
@@ -234,10 +308,11 @@ This project is licensed under the MIT License.
 
 ## 🎯 Future Enhancements
 
-- **Multi-language Support**: Internationalization for global users
-- **Advanced AI Logic**: More sophisticated question routing
-- **Analytics Dashboard**: Real-time application metrics
-- **Email Integration**: Automated follow-up emails
+- **Advanced Analytics**: More detailed candidate insights and trends
+- **Email Integration**: Automated follow-up emails and notifications
 - **File Upload**: Resume and portfolio uploads
 - **Video Responses**: Optional video question responses
-- **Admin Panel**: Application review and management interface
+- **Advanced AI**: More sophisticated question routing and candidate matching
+- **Multi-language Support**: International candidate support
+- **Integration APIs**: Connect with ATS systems and HR tools
+- **Advanced Scoring**: Machine learning models for better candidate evaluation
