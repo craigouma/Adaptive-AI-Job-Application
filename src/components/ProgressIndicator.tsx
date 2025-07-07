@@ -1,5 +1,7 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
+import { useApplicationContext } from '../contexts/ApplicationContext';
+import { useStaticLingo } from '../hooks/useStaticLingo';
 
 interface ProgressIndicatorProps {
   currentStep: number;
@@ -13,15 +15,24 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   completedSteps
 }) => {
   const progressPercentage = (completedSteps / totalSteps) * 100;
+  const { state: appState } = useApplicationContext();
+  const [questionOf, percentComplete] = useStaticLingo(
+    [
+      'Question {currentStep} of {totalSteps}',
+      '{progressPercentage}% Complete'
+    ],
+    'en',
+    appState.language
+  );
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 sm:mb-8 px-2 sm:px-0">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm sm:text-base font-medium text-gray-700">
-          Question {currentStep} of {totalSteps}
+          {questionOf.replace('{currentStep}', String(currentStep)).replace('{totalSteps}', String(totalSteps))}
         </span>
         <span className="text-sm sm:text-base font-medium text-gray-700">
-          {Math.round(progressPercentage)}% Complete
+          {percentComplete.replace('{progressPercentage}', String(Math.round(progressPercentage)))}
         </span>
       </div>
       
@@ -45,7 +56,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             }`}
           >
             {index < completedSteps ? (
-              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+              <CheckCircle className="w-3 h-3 sm:w-4 h-4" />
             ) : (
               <span className="text-xs sm:text-sm font-semibold">{index + 1}</span>
             )}

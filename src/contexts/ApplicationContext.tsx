@@ -10,6 +10,7 @@ interface ApplicationState {
   currentStep: number;
   totalSteps: number;
   error: string | null;
+  language: string;
 }
 
 type ApplicationAction =
@@ -21,7 +22,8 @@ type ApplicationAction =
   | { type: 'SET_CURRENT_STEP'; payload: number }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'RESET_APPLICATION' }
-  | { type: 'INITIALIZE_APPLICATION'; payload: { question: Question | null; totalSteps: number } };
+  | { type: 'INITIALIZE_APPLICATION'; payload: { question: Question | null; totalSteps: number } }
+  | { type: 'SET_LANGUAGE'; payload: string };
 
 const initialState: ApplicationState = {
   role: 'frontend-engineer',
@@ -32,6 +34,7 @@ const initialState: ApplicationState = {
   currentStep: 1,
   totalSteps: 6,
   error: null,
+  language: localStorage.getItem('preferredLanguage') || 'en',
 };
 
 function applicationReducer(state: ApplicationState, action: ApplicationAction): ApplicationState {
@@ -74,7 +77,8 @@ function applicationReducer(state: ApplicationState, action: ApplicationAction):
     case 'RESET_APPLICATION':
       return {
         ...initialState,
-        role: state.role, // Keep the current role
+        role: state.role,
+        language: state.language,
       };
     case 'INITIALIZE_APPLICATION':
       return {
@@ -86,6 +90,12 @@ function applicationReducer(state: ApplicationState, action: ApplicationAction):
         isCompleted: false,
         error: null,
       };
+    case 'SET_LANGUAGE':
+      localStorage.setItem('preferredLanguage', action.payload);
+      return {
+        ...state,
+        language: action.payload,
+      };
     default:
       return state;
   }
@@ -94,6 +104,7 @@ function applicationReducer(state: ApplicationState, action: ApplicationAction):
 interface ApplicationContextType {
   state: ApplicationState;
   dispatch: React.Dispatch<ApplicationAction>;
+  setLanguage: (lang: string) => void;
 }
 
 const ApplicationContext = createContext<ApplicationContextType | undefined>(undefined);
@@ -105,8 +116,12 @@ interface ApplicationProviderProps {
 export const ApplicationProvider: React.FC<ApplicationProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(applicationReducer, initialState);
 
+  const setLanguage = (lang: string) => {
+    dispatch({ type: 'SET_LANGUAGE', payload: lang });
+  };
+
   return (
-    <ApplicationContext.Provider value={{ state, dispatch }}>
+    <ApplicationContext.Provider value={{ state, dispatch, setLanguage }}>
       {children}
     </ApplicationContext.Provider>
   );

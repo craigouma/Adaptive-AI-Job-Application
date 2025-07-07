@@ -1,6 +1,6 @@
 # Adaptive Job Application
 
-A modern, AI-powered job application system that dynamically generates personalized questions based on user responses and selected roles. Built with React, TypeScript, Supabase, and Groq AI.
+A modern, AI-powered job application system that dynamically generates personalized questions based on user responses and selected roles. Built with React, TypeScript, Supabase, and Groq AI, with full internationalization support powered by lingo.dev.
 
 ## 🚀 Features
 
@@ -12,16 +12,51 @@ A modern, AI-powered job application system that dynamically generates personali
 - **Admin Dashboard**: Complete admin interface for managing applications with analytics
 - **Mobile-First Design**: Responsive design optimized for mobile devices
 - **Comprehensive Testing**: Unit tests with Vitest and E2E tests with Playwright
+- **🌐 Full Internationalization**: Real-time AI-powered translation supporting 12+ languages via lingo.dev
+- **Session Caching**: Optimized translation performance with intelligent caching
+- **Dynamic Content Translation**: Questions, options, and UI elements translate on-the-fly
+
+## 🌐 Internationalization Features
+
+### Supported Languages
+- 🇺🇸 English (en)
+- 🇪🇸 Spanish (es)
+- 🇫🇷 French (fr)
+- 🇩🇪 German (de)
+- 🇮🇹 Italian (it)
+- 🇵🇹 Portuguese (pt)
+- 🇨🇳 Chinese (zh)
+- 🇯🇵 Japanese (ja)
+- 🇰🇷 Korean (ko)
+- 🇸🇦 Arabic (ar)
+- 🇮🇳 Hindi (hi)
+- 🇷🇺 Russian (ru)
+
+### Translation Features
+- **Real-time Translation**: All UI text, questions, and options translate instantly when language is changed
+- **Session Caching**: Translated content is cached for optimal performance
+- **Fallback Handling**: Original text is preserved if translation fails
+- **Dynamic Content**: Questions and form options are translated on-the-fly
+- **Static UI Translation**: All interface elements (buttons, labels, messages) are translated
+- **Error Recovery**: Graceful handling of translation service outages
+
+### How Translation Works
+1. **Language Selection**: Users can select their preferred language from a dropdown
+2. **Automatic Translation**: All content is translated using lingo.dev's AI-powered translation
+3. **Caching**: Translated content is cached to avoid repeated API calls
+4. **Fallback**: If translation fails, the original English text is displayed
+5. **Real-time Updates**: Language changes are applied immediately across the entire application
 
 ## 🏗️ Architecture
 
 ### Frontend (React + TypeScript)
-- **ApplicationFlow**: Main application component managing the flow
-- **QuestionCard**: Renders individual questions with various input types
-- **ProgressIndicator**: Shows completion progress with visual feedback
+- **ApplicationFlow**: Main application component managing the flow with language selector
+- **QuestionCard**: Renders individual questions with various input types and translation support
+- **ProgressIndicator**: Shows completion progress with visual feedback and translated text
 - **RoleToggle**: Dropdown selector for choosing job roles
-- **CompletionCard**: Displays success message and next steps
-- **AdminDashboard**: Complete admin interface with analytics
+- **CompletionCard**: Displays success message and next steps with translation
+- **AdminDashboard**: Complete admin interface with analytics (admin UI remains in English)
+- **Translation Service**: Custom hooks and services for managing translations
 
 ### Backend (Supabase Edge Functions)
 - **next-question**: Determines the next question based on current answers using AI
@@ -29,42 +64,11 @@ A modern, AI-powered job application system that dynamically generates personali
 - **admin-applications**: Retrieves applications for admin dashboard
 - **admin-analytics**: Provides application analytics and insights
 - **admin-score-candidate**: AI-powered candidate scoring system
+- **translate**: Proxies translation requests to lingo.dev (new)
 
 ### Database (PostgreSQL)
 - **applications**: Stores application data with role, answers, status, and scores
 - **admin_users**: Admin authentication system
-
-## 🛠️ How Adaptive Question Logic Works
-
-The application uses a sophisticated question flow system powered by Groq AI:
-
-1. **Role Selection**: User chooses from 10 available job roles
-2. **AI-Generated Questions**: Groq AI generates contextual questions based on:
-   - Selected role and its requirements
-   - Previous answers from the candidate
-   - Current stage in the application process
-3. **Dynamic Flow**: Questions are served one at a time, each building on previous responses
-4. **Fallback System**: Predefined questions ensure the system works even without AI
-5. **Progress Tracking**: Real-time updates show completion percentage
-6. **Completion Detection**: System automatically detects when all questions are answered
-
-### Supported Job Roles:
-- **Frontend Engineer**: React, TypeScript, CSS, JavaScript focus
-- **Product Designer**: UX/UI design, design systems, user research
-- **Backend Engineer**: Server-side development, APIs, databases
-- **Full Stack Engineer**: End-to-end development
-- **Data Scientist**: Machine learning, data analysis, Python/R
-- **DevOps Engineer**: Infrastructure, CI/CD, cloud platforms
-- **Product Manager**: Product strategy, roadmap planning
-- **UI/UX Designer**: Interface design, user experience
-- **Mobile Developer**: iOS, Android, cross-platform development
-- **QA Engineer**: Testing, automation, quality assurance
-
-### Question Types Supported:
-- **Text Input**: For names, emails, and short answers
-- **Textarea**: For detailed responses and descriptions
-- **Select Dropdown**: For multiple choice questions
-- **Number Input**: For numeric values (experience years, etc.)
 
 ## 🔧 Setup & Configuration
 
@@ -72,6 +76,7 @@ The application uses a sophisticated question flow system powered by Groq AI:
 - Node.js 18+
 - Supabase account
 - Groq API key
+- lingo.dev API key
 
 ### Environment Variables
 Create a `.env` file based on `.env.example`:
@@ -84,6 +89,9 @@ GROQ_API_KEY=your_groq_api_key_here
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Translation Configuration
+VITE_LINGO_API_KEY=your_lingo_dev_api_key_here
 ```
 
 ### Getting API Keys
@@ -99,31 +107,23 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 3. Copy the Project URL and anon key
 4. Copy the service role key from the same page
 
-### Database Setup
-The application automatically creates the required database schema:
+#### lingo.dev Setup
+1. Visit [lingo.dev](https://lingo.dev)
+2. Create an account and generate an API key
+3. Copy the key to your `.env` file
+4. Set the `LINGO_API_KEY` environment variable in your Supabase Edge Functions
 
-```sql
--- Applications table
-CREATE TABLE applications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  role text NOT NULL CHECK (role IN ('frontend-engineer', 'product-designer', ...)),
-  answers jsonb NOT NULL DEFAULT '[]'::jsonb,
-  status text DEFAULT 'pending',
-  score integer,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+### Supabase Edge Functions Setup
+The translation functionality requires a Supabase Edge Function to proxy requests to lingo.dev:
 
--- Admin users table
-CREATE TABLE admin_users (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email text UNIQUE NOT NULL,
-  password_hash text NOT NULL,
-  role text DEFAULT 'admin',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+1. **Deploy the translate function:**
+```bash
+supabase functions deploy translate
 ```
+
+2. **Set the LINGO_API_KEY in Supabase:**
+   - Go to your Supabase dashboard → Settings → Functions → Environment Variables
+   - Add `LINGO_API_KEY` with your lingo.dev API key
 
 ## 📦 Installation
 
@@ -144,7 +144,12 @@ cp .env.example .env
 # Edit .env with your actual API keys
 ```
 
-4. **Start the development server**
+4. **Deploy Supabase Edge Functions**
+```bash
+supabase functions deploy translate
+```
+
+5. **Start the development server**
 ```bash
 npm run dev
 ```
@@ -185,6 +190,7 @@ npm run test:e2e:ui
 - **Form Validation**: Tests required field validation
 - **Error Handling**: Verifies graceful error handling
 - **Admin Dashboard**: Tests admin functionality and analytics
+- **Translation Features**: Tests language switching and content translation
 
 ## 🎯 Admin Dashboard Features
 
@@ -239,6 +245,7 @@ Edge functions are automatically deployed when you push to your Supabase project
 - Role distribution analysis
 - Drop-off points identification
 - Candidate scoring distribution
+- Language usage statistics
 
 ### Database Queries
 ```sql
@@ -280,6 +287,13 @@ This project is licensed under the MIT License.
 - Verify your Supabase URL and keys are correct
 - Check that your Groq API key is valid
 - Ensure edge functions are deployed
+- Verify your lingo.dev API key is set in Supabase Edge Functions
+
+**Translation Issues**
+- Check that the `translate` Edge Function is deployed
+- Verify `LINGO_API_KEY` is set in Supabase Edge Functions
+- Check lingo.dev service status for any outages
+- Ensure your lingo.dev API key has sufficient credits
 
 **Database Errors**
 - Verify the applications table exists
@@ -302,6 +316,7 @@ This project is licensed under the MIT License.
 - **Backend**: Supabase Edge Functions (Deno)
 - **Database**: PostgreSQL (via Supabase)
 - **AI**: Groq LLaMA 3 70B
+- **Translation**: lingo.dev AI-powered translation
 - **Testing**: Vitest, Playwright, Testing Library
 - **Build**: Vite
 - **Deployment**: Netlify (frontend), Supabase (backend)
@@ -313,6 +328,8 @@ This project is licensed under the MIT License.
 - **File Upload**: Resume and portfolio uploads
 - **Video Responses**: Optional video question responses
 - **Advanced AI**: More sophisticated question routing and candidate matching
-- **Multi-language Support**: International candidate support
+- **Enhanced Translation**: Voice-to-text translation, regional dialect support
 - **Integration APIs**: Connect with ATS systems and HR tools
 - **Advanced Scoring**: Machine learning models for better candidate evaluation
+- **Translation Analytics**: Track which languages are most used
+- **Offline Translation**: Cache translations for offline use

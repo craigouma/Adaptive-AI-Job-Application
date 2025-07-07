@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Loader2, Globe } from 'lucide-react';
 import { Question, Answer } from '../types';
+import { useApplicationContext } from '../contexts/ApplicationContext';
+import { translateText } from '../services/lingoService';
+import { useStaticLingo } from '../hooks/useStaticLingo';
 
 interface QuestionCardProps {
   question: Question;
@@ -17,6 +20,69 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const [value, setValue] = useState<string | number>(currentAnswer);
   const [isAnimating, setIsAnimating] = useState(false);
+  const { state: appState } = useApplicationContext();
+  const lang = appState.language;
+
+  // State for translated question and options
+  const [translatedLabel, setTranslatedLabel] = useState(question.label);
+  const [translatedOptions, setTranslatedOptions] = useState<string[]>(question.options || []);
+
+  // Static UI strings
+  const [requiredText, shareThoughts, selectOption, enterNumber, typeAnswer, processing, continueText] = useStaticLingo(
+    [
+      '* Required',
+      'Share your thoughts...',
+      'Select an option...',
+      'Enter a number...',
+      'Type your answer...',
+      'Processing...',
+      'Continue'
+    ],
+    'en',
+    lang
+  );
+
+  // Translate question label and options on language change
+  useEffect(() => {
+    let isMounted = true;
+    const doTranslate = async () => {
+      if (lang === 'en') {
+        setTranslatedLabel(question.label);
+        setTranslatedOptions(question.options || []);
+        console.log('[Lingo] Language is English, skipping translation.');
+        return;
+      }
+      try {
+        console.log('[Lingo] Translating question label:', question.label, 'from en to', lang);
+        const label = await translateText(question.label, 'en', lang);
+        console.log('[Lingo] Translated label:', label);
+        let options: string[] = [];
+        if (question.options) {
+          console.log('[Lingo] Translating options:', question.options, 'from en to', lang);
+          options = await Promise.all(question.options.map(async (opt) => {
+            try {
+              const translated = await translateText(opt, 'en', lang);
+              console.log('[Lingo] Option:', opt, '->', translated);
+              return translated;
+            } catch (err) {
+              console.error('[Lingo] Option translation error:', err);
+              return opt;
+            }
+          }));
+        }
+        if (isMounted) {
+          setTranslatedLabel(label);
+          setTranslatedOptions(options);
+        }
+      } catch (err) {
+        console.error('[Lingo] Question translation error:', err);
+        setTranslatedLabel(question.label);
+        setTranslatedOptions(question.options || []);
+      }
+    };
+    doTranslate();
+    return () => { isMounted = false; };
+  }, [question, lang]);
 
   useEffect(() => {
     // Reset value when question changes
@@ -26,7 +92,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!value && question.required) return;
-    
     setIsAnimating(true);
     setTimeout(() => {
       onAnswer({ key: question.key, value });
@@ -43,7 +108,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none h-28 sm:h-32 text-base"
-            placeholder="Share your thoughts..."
+            placeholder={shareThoughts}
             required={question.required}
           />
         );
@@ -55,9 +120,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base appearance-none bg-white"
             required={question.required}
           >
-            <option value="">Select an option...</option>
-            {question.options?.map((option) => (
-              <option key={option} value={option}>
+            <option value="">{selectOption}</option>
+            {translatedOptions?.map((option, idx) => (
+              <option key={question.options ? question.options[idx] : option} value={question.options ? question.options[idx] : option}>
                 {option}
               </option>
             ))}
@@ -70,7 +135,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             value={value}
             onChange={(e) => setValue(Number(e.target.value))}
             className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
-            placeholder="Enter a number..."
+            placeholder={enterNumber}
             required={question.required}
           />
         );
@@ -81,7 +146,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
-            placeholder="Type your answer..."
+            placeholder={typeAnswer}
             required={question.required}
           />
         );
@@ -93,10 +158,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div className="space-y-2">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
-            {question.label}
+            {translatedLabel}
           </h2>
           {question.required && (
-            <p className="text-sm text-gray-500">* Required</p>
+            <p className="text-sm text-gray-500">{requiredText}</p>
           )}
         </div>
 
@@ -112,11 +177,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Processing...</span>
+              <span>{processing}</span>
             </>
           ) : (
             <>
-              <span>Continue</span>
+              <span>{continueText}</span>
               <ChevronRight className="w-5 h-5" />
             </>
           )}
